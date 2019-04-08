@@ -1,0 +1,279 @@
+#!/usr/bin/ruby
+
+### GLOBALS ###
+
+$c1 = "x"
+$c2 = " "
+$c3 = "⚬"
+$map = nil
+
+### USAGES ###
+
+def printUsages(ac)
+	if ac > 4 || ac < 1 || ARGV[0] == "-h"
+	        puts "USAGE"
+		puts "\t./304pacman file [c1] [c2] [c3]"
+		puts "DESCRIPTION"
+		puts "\tfile\tfile represents the game board and contains the following characters:"
+		puts "\t\t\t• ’0’ for an empty square,"
+		puts "\t\t\t• ’1’ for a wall,"
+		puts "\t\t\t• ’F’ for the ghost’s position,"
+		puts "\t\t\t• ’P’ for Pacman’s position."
+		puts "\tc1\tcharacter to display for a wall."
+		puts "\tc2\tcharacter to display for an empty space."
+		puts "\tc3\tcharacter to display for best way"
+		exit 0
+	end
+end
+
+### CHECK ARGUMENTS ###
+
+def badChar?(c, i, y)
+	if c != "1" && c != "0" && c != "F" && c != "P"
+		print "Unvalide character ! line:"
+		print i + 1
+		print ":"
+		print y + 1
+		print " => "
+		puts c
+		exit 84
+		return 0
+	end
+	return 1
+end
+
+def checkFile(file)
+	if File.readable?(file)
+		f = nil
+		p = nil
+		$map = []
+		i = 0
+		File.open(file).each do |rawLine|
+			$map.append([])
+			line = rawLine.strip()
+			for y in 0..line.length() -1
+				badChar?(line[y], i, y)
+				if line[y] == "F"
+					if f != nil
+						puts "More than one F in file !"
+						exit 84
+					end
+					f = [y, i, 0]
+				elsif line[y] == "P"
+					if p != nil
+						puts "More than one P in file"
+						exit 84
+					end
+					p = [y, i]
+				end
+				$map[i].append(line[y])
+			end
+			i += 1
+		end
+	if f == nil
+		puts "No F found in file !"
+		exit 84
+	end
+	if p == nil
+		puts "No P found in file !"
+		exit 84
+	end
+	return [f]
+	end
+	print "Can't open "
+	puts file
+	exit 84
+end
+
+def checkArgs
+	ac = 0
+	until ARGV[ac] == nil
+		ac+=1
+	end
+	if ac > 1
+		$c1 = ARGV[1]
+		if ac > 2
+			$c2 = ARGV[2]
+			if ac > 3
+				$c3 = ARGV[3]
+			end
+		end
+	end
+	printUsages(ac)
+	if $c1.length != 1 || $c2.length != 1
+		puts "Invalid characters !"
+		exit 84
+	end
+	if $c1 == $c2
+		puts "c1 and c2 must be differant !"
+		exit 84
+	end
+	return checkFile(ARGV[0])
+end
+
+### ALGO FUNC ###
+
+def findGoodP(x, i)
+	if  x < $map.length - 1 && ($map[x + 1][i].is_a? Integer)
+		return true
+	elsif  x != 0 && ($map[x - 1][i].is_a? Integer)
+		return true
+	elsif  i < $map[x].length - 1 && ($map[x][i + 1].is_a? Integer)
+		return true
+	elsif  i != 0 && ($map[x][i - 1].is_a? Integer)
+		return true
+	else
+		return false
+	end
+end
+
+def findP
+	x = 0
+	until x >= $map.length
+		i = 0
+		until i >= $map[x].length
+			if $map[x][i] == "P"
+				if findGoodP(x, i)
+					return [x, i]
+				end
+			end
+			i += 1
+		end
+		x += 1
+	end
+end
+
+def findWay(x, i)
+	if  x < $map.length - 1 && ($map[x + 1][i].is_a? Integer)
+		return [x + 1, i]
+	elsif x != 0 && ($map[x - 1][i].is_a? Integer)
+		return [x - 1, i]
+	elsif i < $map[x].length - 1 && ($map[x][i + 1].is_a? Integer)
+		return [x, i + 1]
+	elsif  i != 0 && ($map[x][i - 1].is_a? Integer)
+		return [x, i - 1]
+	else
+		return [0, 0]
+	end
+end
+
+def findNextWay(x, i, val)
+	if val == 0
+		val = 10
+	end
+	if ($map[x + 1][i].is_a? Integer) && x <= $map.length && $map[x + 1][i] == val - 1
+		return [x + 1, i]
+	elsif ($map[x - 1][i].is_a? Integer) && x != 0 && $map[x - 1][i] == val - 1
+		return [x - 1, i]
+	elsif ($map[x][i + 1].is_a? Integer) && i <= $map[x].length && $map[x][i + 1] == val - 1
+		return [x, i + 1]
+	elsif ($map[x][i - 1].is_a? Integer) && i != 0 && $map[x][i - 1] == val - 1
+		return [x, i - 1]
+	else
+		return [0, 0]
+	end
+end
+
+def printPathWay
+	x = 0
+	until x >= $map.length
+		i = 0
+		until i >= $map[x].length
+			if $map[x][i] == "1"
+				print $c1
+			elsif $map[x][i] == "2"
+				print "\033[92m"
+				print $c3
+				print "\e[0m"
+			elsif $map[x][i] == "F"
+				print "\033[97m"
+				print "⍉"
+				print "\e[0m"
+			elsif $map[x][i] == "P"
+				print "\033[33m"
+				print "⚈"
+				print "\e[0m"
+			elsif ($map[x][i] == "0" || ($map[x][i].is_a? Integer))
+				print $c2
+			else
+				print $map[x][i]
+			end
+			i += 1
+		end
+		puts ''
+		x += 1
+	end
+end
+
+def nextIsF?(x, i)
+	if $map[x + 1][i] == "F"
+		return true
+	elsif $map[x - 1][i] == "F"
+		return true
+	elsif $map[x][i + 1] == "F"
+		return true
+	elsif $map[x][i - 1] == "F"
+		return true
+	else
+		return false
+	end
+end
+
+def printPath
+	p = findP
+	p = findWay(p[0], p[1])
+	val = $map[p[0]][p[1]]
+	until val == "F"
+		$map[p[0]][p[1]] = "2"
+		if nextIsF?(p[0], p[1])
+			val = "F"
+		else
+			p = findNextWay(p[0], p[1], val)
+			val = $map[p[0]][p[1]]
+		end
+	end
+	printPathWay
+end
+
+def checkPath(last, x, y, l)
+	if x < 0 || y < 0 || y >= $map.length || x >= $map[y].length
+		return false
+	end
+	if $map[y][x] == "P"
+		return true
+	end
+	if $map[y][x] != "0"
+		return false
+	end
+	$map[y][x] = l + 1
+	last.append([x, y, l + 1])
+	return false
+end
+
+def computePath(f)
+	findPath = false
+	until f.length <= 0
+		tmp = []
+		for p in f
+			if checkPath(tmp, p[0], p[1] - 1, p[2]) || checkPath(tmp, p[0] + 1, p[1], p[2]) || checkPath(tmp, p[0], p[1] + 1, p[2]) || checkPath(tmp, p[0] - 1, p[1], p[2])
+				findPath = true
+				tmp = []
+				break
+			end
+		end
+		f = tmp
+	end
+	system "clear" or system "cls"
+	if findPath
+		printPath
+	else
+		puts "No path found !"
+	end
+	sleep(0.5)
+end
+
+### MAIN ###
+
+while i = 0 != 100
+	computePath(checkArgs)
+end
